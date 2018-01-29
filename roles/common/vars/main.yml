@@ -1,5 +1,5 @@
  wifi_country: "US"
- #wifi_ssid: "somessid"
+ wifi_ssid: "somessid"
  wifi_password: "somepassword"
  # locale: "en_US.UTF-8"
  # keyboard: "pc104"

@@ -1,0 +1,27 @@
+---
+- gather_facts: yes
+  vars:
+    packages_to_install:
+     - git
+     - build-essential
+     - python-pip
+     - python-dev
+     - vim
+    pip_packages_to_install:
+    update_cache: no
+  become: yes
+  tasks:
+    - name: install python-apt
+      apt: python-apt
+      register: aptget
+      changed_when: "'python-apt is already the newest version.' not in aptget.stdout_lines"
+
+    - name: install packages
+      apt: pkg={{ item  }} state=installed update_cache={{ update_cache }}
+      with_items:
+       - "{{ packages_to_install }}"
+
+    - name: install python modules with pip
+      pip: name={{  item  }}
+      with_items:
+       - "{{ pip_packages_to_install }}"

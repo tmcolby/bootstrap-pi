@@ -91,6 +91,40 @@
 # #todo: create new user here and update ssh folder for new user
 # #todo: need to change the pi user default address
 #
+
+  # - name: Create user account
+  #   become: yes
+  #   user:
+  #     name: tyson
+  #     comment: "Tyson Colby"
+  #     groups: dialout,sudo,users,input,netdev
+  #     append: yes
+  #     shell: /bin/bash
+  #     state: present
+  #     # password: temppass
+  #     # update_password: always
+  #     #expires: 0
+  #   tags: create user
+
+  - name: Create user account (alternate)
+    become: yes
+    user:
+      name: tyson
+      groups: sudo
+      password: "{{ 'password' | password_hash( 'sha512' )}}"
+      shell: /bin/bash
+      update_password: on_create
+    register: tyson
+    tags: create user
+
+  - name: Force tyson to change password
+    become: yes
+    shell: chage -d0 tyson
+    #when: tyson.changed
+    tags:
+    - create user
+    - force password reset
+
   - name: Create SSH folder
     become: yes
     file:
@@ -111,52 +145,37 @@
       mode: 0644
     tags: ssh
 
-  # - name: Create user account
-  #   become: yes
-  #   user:
-  #     name: tyson
-  #     comment: "Tyson Colby"
-  #     groups: dialout,sudo,users,input,netdev
-  #     append: yes
-  #     shell: /bin/bash
-  #     state: present
-  #     # password: temppass
-  #     # update_password: always
-  #     #expires: 0
-  #   tags: create user
-
-  - name: Create user account (alternate)
+  - name: Lock user tyson
     become: yes
-    user:
-      name: tyson
-      password: "{{ 'password' | password_hash( 'sha512' )}}"
-      shell: /bin/bash
-      update_password: on_create
-    register: tyson
-    tags: create users
+    command: usermod --lock --expiredate "1999-01-01" tyson
+    tags: lock user
 
-  - name: Force tyson to change password
+  - name: Unlock user tyson
     become: yes
-    shell: chage -d0 tyson
-    when: tyson.changed
-    tags: create users
+    command: usermod --unlock --expiredate "" tyson
+    tags: unlock user
 
-  # - name: force user password present
-  #   become: yes
-  #   command: usermod --
 
-#
-# #todo: use template to setup a propper sshd_config file
-#   - name: Place secure sshd_config file
-#     become: yes
-#     template:
-#       src: ../templates/sshd_config
-#       dest: /etc/ssh
-#       owner: root
-#       group: root
-#       mode: "u=rw,g=r,o=r"
-#       backup: yes
-#     tags: test
+#todo: use template to setup a propper sshd_config file
+  - name: Place secure sshd_config file
+    become: yes
+    template:
+      src: roles/common/templates/sshd_config
+      dest: /etc/ssh
+      owner: root
+      group: root
+      mode: 0600
+      backup: yes
+    register: sshdconfig
+    tags: ssh config
+
+  - name: restart ssh service
+    become: yes
+    service:
+      name: ssh
+      state: reloaded
+    when: sshdconfig.changed
+    tags: ssh config
 #
 #
 #   - name: run 'dpkg --configure -a'

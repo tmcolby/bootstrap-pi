@@ -91,8 +91,23 @@
 # #todo: create new user here and update ssh folder for new user
 # #todo: need to change the pi user default address
 #
-#   - name: Create SSH folder
-#     file: path=~/.ssh state=directory
+  - name: Create SSH folder
+    file:
+      path: ~/.ssh
+      state: directory
+      owner: pi
+      group: pi
+      mode: 0700
+    tags: ssh
+
+  - name: Set up SSH Key from a template
+    template:
+      src: roles/common/templates/authorized_keys
+      dest: /home/pi/.ssh/authorized_keys
+      owner: pi
+      group: pi
+      mode: 0644
+    tags: ssh
 #
 # #todo: use template to setup a propper sshd_config file
 #   - name: Place secure sshd_config file
@@ -106,8 +121,6 @@
 #       backup: yes
 #     tags: test
 #
-#   - name: Set up SSH Key from a template
-#     template: src=../templates/authorized_keys dest=~/.ssh/authorized_keys
 #
 #   - name: run 'dpkg --configure -a'
 #     become: yes
@@ -120,10 +133,10 @@
 # #todo: after update and upgrade run install_packages
 
     # Set the hostname
-    # Set the hostname
   - name: Set the hostname
     become: yes
     command: hostnamectl set-hostname "{{ hostname }}"
+    notify: reboot
     tags: hostname
 
   handlers:

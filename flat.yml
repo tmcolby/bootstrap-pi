@@ -92,22 +92,59 @@
 # #todo: need to change the pi user default address
 #
   - name: Create SSH folder
+    become: yes
     file:
-      path: ~/.ssh
+      path: /home/tyson/.ssh
       state: directory
-      owner: pi
-      group: pi
+      owner: tyson
+      group: tyson
       mode: 0700
     tags: ssh
 
   - name: Set up SSH Key from a template
+    become: yes
     template:
       src: roles/common/templates/authorized_keys
-      dest: /home/pi/.ssh/authorized_keys
-      owner: pi
-      group: pi
+      dest: /home/tyson/.ssh/authorized_keys
+      owner: tyson
+      group: tyson
       mode: 0644
     tags: ssh
+
+  # - name: Create user account
+  #   become: yes
+  #   user:
+  #     name: tyson
+  #     comment: "Tyson Colby"
+  #     groups: dialout,sudo,users,input,netdev
+  #     append: yes
+  #     shell: /bin/bash
+  #     state: present
+  #     # password: temppass
+  #     # update_password: always
+  #     #expires: 0
+  #   tags: create user
+
+  - name: Create user account (alternate)
+    become: yes
+    user:
+      name: tyson
+      password: "{{ 'password' | password_hash( 'sha512' )}}"
+      shell: /bin/bash
+      update_password: on_create
+    register: tyson
+    tags: create users
+
+  - name: Force tyson to change password
+    become: yes
+    shell: chage -d0 tyson
+    when: tyson.changed
+    tags: create users
+
+  # - name: force user password present
+  #   become: yes
+  #   command: usermod --
+
 #
 # #todo: use template to setup a propper sshd_config file
 #   - name: Place secure sshd_config file

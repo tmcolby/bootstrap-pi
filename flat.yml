@@ -1,0 +1,163 @@
+# ansible-playbook -i ~/ansible/hosts /playbooks/new-default.yml
+---
+- hosts: pis
+  gather_facts: yes
+  #transport: paramiko
+  vars:
+    wifi_country: "US"
+    locale: "en_US.UTF-8"
+    keyboard: "pc104"
+    keyboard_layout: "us"
+    timezone: America/Los_Angeles
+    locale_options:
+    # Disable Default (GB) Locale
+    - regexp: "^#?en_GB.UTF-8 UTF-8"
+      line: "# en_GB.UTF-8 UTF-8"
+    # Enable US Locale
+    - regexp: "^#?en_US.UTF-8 UTF-8"
+      line: "en_US.UTF-8 UTF-8"
+
+  vars_prompt:
+  - name: hostname
+    prompt: "please enter a hostname"
+    private: no
+    default: raspberrypi
+  - name: wifi_ssid
+    prompt: "please enter the WiFi SSID"
+    private: no
+  - name: wifi_password
+    prompt: "please enter the WiFi password (private)"
+    private: yes
+  - name: ssh_key
+    prompt: "please enter the SSH public key (clear text)"
+    private: no
+
+  tasks:
+  # ~~~~~~~~~~~~~~~~~ Expand filesystem ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  - name: Expand filesystem to fill disk
+    command: raspi-config --expand-rootfs
+    become: yes
+    notify:
+      - reboot
+    tags: expand
+
+  # ~~~~~~~~~~~~~~~~~ Locale and Internationalization~~~~~~~~~~~~~~~~~~~~~
+  # Configure /etc/locale.gen values
+  - name: Configure option values in /etc/locale.gen file.
+    become: yes
+    lineinfile:
+      dest: /etc/locale.gen
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+      insertafter: EOF
+      state: present
+    with_items: "{{ locale_options }}"
+    tags: initial
+
+  # Generate Locale
+  - name: Generate Locale
+    become: yes
+    command: locale-gen {{ locale }}
+    tags: initial
+
+  # Set Locale
+  - name: Set Locale
+    become: yes
+    command: update-locale LC_ALL={{ locale }} LANG={{ locale }}
+    tags: initial
+
+  # set /etc/timezone
+  - name: set /etc/timezone
+    become: yes
+    command: timedatectl set-timezone {{ timezone }}
+    tags: initial
+
+  # set /etc/default/keyboard
+  - name: set /etc/default/keyboard
+    become: yes
+    template: src=roles/common/templates/keyboard dest=/etc/default/keyboard
+    notify: reboot
+    tags: initial
+
+  # ~~~~~~~~~~~~~~~~~ wifi ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # Set up WiFi from a tempate
+  - name: install wpa_supplicant file
+    become: yes
+    template: src=roles/common/templates/wpa_supplicant.conf dest=/etc/wpa_supplicant/wpa_supplicant.conf
+    notify: reboot
+    tags: wifi
+
+
+# #todo: create new user here and update ssh folder for new user
+# #todo: need to change the pi user default address
+#
+#   - name: Create SSH folder
+#     file: path=~/.ssh state=directory
+#
+# #todo: use template to setup a propper sshd_config file
+#   - name: Place secure sshd_config file
+#     become: yes
+#     template:
+#       src: ../templates/sshd_config
+#       dest: /etc/ssh
+#       owner: root
+#       group: root
+#       mode: "u=rw,g=r,o=r"
+#       backup: yes
+#     tags: test
+#
+#   - name: Set up SSH Key from a template
+#     template: src=../templates/authorized_keys dest=~/.ssh/authorized_keys
+#
+#   - name: run 'dpkg --configure -a'
+#     become: yes
+#     command: dpkg --configure -a
+#
+#     # Run apt-get update and apt-get upgrade
+#   - include: ../tasks/update.yml
+#     tags: update
+#
+# #todo: after update and upgrade run install_packages
+
+    # Set the hostname
+    # Set the hostname
+  - name: Set the hostname
+    become: yes
+    command: hostnamectl set-hostname "{{ hostname }}"
+    tags: hostname
+
+  handlers:
+  #~~~~~~~~~~~~~~~ reboot ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  - name: reboot
+    command: shutdown -r +0 'Ansible Reboot triggered'
+    async: 0
+    poll: 0
+    ignore_errors: true
+    become: true
+
+  # - name: resume after reboot
+  #   local_action: wait_for host={{ansible_host}}
+  #     timeout=60
+  #     port=22
+  #     delay=10
+  #     state=started
+  #     connect_timeout=15
+    # wait_for: timeout=60
+    # delegate_to: localhost
+    # notify: check ssh is back up
+
+  # - name: check ssh is back up
+  #   wait_for:
+  #     port: 22
+  #     host: "{{ ansible_host }}"
+  #     search_regex: OpenSSH
+  #     delay: 10
+  #   connection: local
+
+
+
+  #~~~~~~~~~~~~~~~ reboot ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # Update Timezone Data
+  # - name: update tzdata
+  #   become: true
+  #   command: dpkg-reconfigure --frontend noninteractive tzdata

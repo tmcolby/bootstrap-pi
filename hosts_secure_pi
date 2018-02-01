@@ -1,0 +1,6 @@
+[newuser]
+raspberrypi.local
+[newuser:vars]
+ansible_user=tyson
+ansible_sudo_pass=password
+new_pi_pass = blackberry

@@ -1,0 +1,42 @@
+# ansible-playbook -i ~/ansible/hosts /playbooks/new-default.yml
+---
+- hosts: newuser
+  gather_facts: yes
+
+  # vars_prompt:
+  # - name: new_user_name
+  #   prompt: Please enter a new username (If none, leave blank)
+  #   private: no
+  # - name: new_user_pass
+  #   prompt: Please enter the password (If none, leave blank)
+  #   private: yes
+  #   #todo prompt user to enter password again, abort if they dont match
+  # - name: new_user_ssh_key
+  #   prompt: Please paste the public key file (If none, leave blank)
+  #   private: no
+  # - name: new_pi_pass
+  #   prompt: Please change defualt pi password (If no, leave blank)
+  #   private: yes
+  #   #todo prompt user to re-enter pi password, abort if they dont match
+  # - name: lock_pi_account
+  #   prompt: "Do you want to lock the default pi account? (If no, leave blank)"
+  #   private: no
+  # - name: secure_sshd_config
+  #   prompt: Do you want to disble clear text password authentication over ssh? (If no, leave blank)
+  #   private: no
+    #todo, testing for blank or "no" should force to lowercase prior. do this in the when: clauses
+
+  tasks:
+
+  - name: Changing default pi passwordtyson
+    become: yes
+    user:
+      name: pi
+      password: "{{ new_pi_pass | password_hash('sha512') }}"
+      update_password: always
+    # when: new_pi_pass != "" and new_pi_pass != "no"
+
+  - name: Lock default user pi account
+    become: yes
+    command: usermod --lock --expiredate "1999-01-01" pi
+    # when: lock_pi_account != "" and lock_pi_account != "no"

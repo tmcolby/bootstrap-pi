@@ -1,0 +1,6 @@
+[default]
+raspberrypi.local
+[default:vars]
+ansible_user=pi
+ansible_sudo_pass=raspberry
+ansible_ssh_pass=raspberry

@@ -1,0 +1,98 @@
+# ansible-playbook -i ~/ansible/hosts /playbooks/new-default.yml
+---
+- hosts: default
+  gather_facts: yes
+
+  # vars_prompt:
+  # - name: new_user_name
+  #   prompt: Please enter a new username (If none, leave blank)
+  #   private: no
+  # - name: new_user_pass
+  #   prompt: Please enter the password (If none, leave blank)
+  #   private: yes
+  #   #todo prompt user to enter password again, abort if they dont match
+  # - name: new_user_ssh_key
+  #   prompt: Please paste the public key file (
+  #   private: no
+  # - name: new_pi_pass
+  #   prompt: Please change defualt pi password (If no, leave blank)
+  #   private: yes
+  #   #todo prompt user to re-enter pi password, abort if they dont match
+  # - name: lock_pi_account
+  #   prompt: "Do you want to lock the default pi account? (If no, leave blank)"
+  #   private: no
+  # - name: secure_sshd_config
+  #   prompt: Do you want to disble clear text password authentication over ssh? (If no, leave blank)
+  #   private: no
+    #todo, testing for blank or "no" should force to lowercase prior. do this in the when: clauses
+
+  tasks:
+  - name: Create new user account for {{new_user_name}}
+    become: yes
+    user:
+      name: "{{new_user_name}}"
+      groups: sudo
+      append: yes
+      password: "{{ new_user_pass | password_hash( 'sha512' )}}"
+      shell: /bin/bash
+      update_password: on_create
+    # when: new_user_name != ""
+
+  - name: Create ~/.ssh folder for {{new_user_name}}
+    become: yes
+    file:
+      path: "/home/{{new_user_name}}/.ssh"
+      state: directory
+      owner: "{{new_user_name}}"
+      group: "{{new_user_name}}"
+      mode: 0700
+    # when: new_user_name != ""
+
+  - name: Add {{new_user_name}}'s public key to authorized_keys file
+    become: yes
+    template:
+      src: roles/common/templates/authorized_keys
+      dest: "/home/{{new_user_name}}/.ssh/authorized_keys"
+      owner: "{{new_user_name}}"
+      group: "{{new_user_name}}"
+      mode: 0644
+    # when: new_user_name != ""
+
+  - name: Placing secure sshd_config file
+    become: yes
+    template:
+      src: roles/common/templates/sshd_config
+      dest: /etc/ssh
+      owner: root
+      group: root
+      mode: 0600
+      backup: yes
+    register: sshdconfig
+    # when: secure_sshd_config != "" and secure_sshd_config != "no"
+
+  - name: Restart ssh service
+    become: yes
+    service:
+      name: ssh
+      state: reloaded
+    when: sshdconfig.changed
+
+  # - set_fact:
+  #     ansible_become_user: "{{new_user_name}}"
+  #     ansible_become_password: "{{new_user_pass}}"
+  #     ansible_become_method: sudo
+  #     ansible_become: yes
+
+  #
+  # - name: Lock default user pi account
+  #   become: yes
+  #   command: usermod --lock --expiredate "1999-01-01" pi
+  #   when: lock_pi_account != "" and lock_pi_account != "no"
+  #
+  # - name: Changing default pi passwordtyson
+  #   become: yes
+  #   user:
+  #     name: pi
+  #     password: "{{ new_pi_pass | password_hash('sha512') }}"
+  #     update_password: always
+  #   when: new_pi_pass != "" and new_pi_pass != "no"

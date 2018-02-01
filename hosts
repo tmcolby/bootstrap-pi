@@ -1,7 +1,10 @@
-[pis]
+[default]
 raspberrypi.local
 #192.168.100.110
-[pis:vars]
+[default:vars]
 ansible_user=pi
 ansible_sudo_pass=raspberry
 ansible_ssh_pass=raspberry
+new_user_name = tyson
+new_user_pass = password
+new_user_ssh_key = ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDIqT6ao9kYMStIiJmT09bMThfPN0X92T3Un8DJevycF+5fSLweW+UtBuhgj8euJmESb+YAYbRY4jKB4FhdJtviCe+U+8CMszUeoIhu8wyKGqlFU9Vbp7Bm+8IbO9KHNOg+zQAfQFR7RWZGCkAb0NTCLEJlP9gApMp8tqksP0cBl6aW7G7rEnWjY02UeHTrXzmrAPdxriw5hbJ0Zp71aa7qRH/LnKG2RzZNzZ+vRrPGlCqvELngF6Ka2+h23ogbaRp26wPtGwmWNcAKfMTco29+EaOK08AQ8sThKMkTvs8e7yUvznCpRxQ++XUQXSiRdnCfANM0a3vCR6SLEQtMHW+F tyson

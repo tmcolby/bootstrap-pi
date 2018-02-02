@@ -1,6 +1,6 @@
 # ansible-playbook -i ~/ansible/hosts /playbooks/new-default.yml
 ---
-- hosts: default
+- hosts: newuser
   gather_facts: yes
   #transport: paramiko
   vars:
@@ -16,21 +16,7 @@
     # Enable US Locale
     - regexp: "^#?en_US.UTF-8 UTF-8"
       line: "en_US.UTF-8 UTF-8"
-
-  vars_prompt:
-  - name: hostname
-    prompt: "please enter a hostname"
-    private: no
-    default: raspberrypi
-  - name: wifi_ssid
-    prompt: "please enter the WiFi SSID"
-    private: no
-  - name: wifi_password
-    prompt: "please enter the WiFi password (private)"
-    private: yes
-  - name: ssh_key
-    prompt: "please enter the SSH public key (clear text)"
-    private: no
+    hostname: blackberrypi
 
   tasks:
   # ~~~~~~~~~~~~~~~~~ Expand filesystem ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -79,121 +65,23 @@
     notify: reboot
     tags: initial
 
-  # ~~~~~~~~~~~~~~~~~ wifi ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Set up WiFi from a tempate
-  - name: install wpa_supplicant file
-    become: yes
-    template: src=roles/common/templates/wpa_supplicant.conf dest=/etc/wpa_supplicant/wpa_supplicant.conf
-    notify: reboot
-    tags: wifi
-
-
-# #todo: create new user here and update ssh folder for new user
-# #todo: need to change the pi user default address
-#
-
-  # - name: Create user account
-  #   become: yes
-  #   user:
-  #     name: tyson
-  #     comment: "Tyson Colby"
-  #     groups: dialout,sudo,users,input,netdev
-  #     append: yes
-  #     shell: /bin/bash
-  #     state: present
-  #     # password: temppass
-  #     # update_password: always
-  #     #expires: 0
-  #   tags: create user
-
-  - name: Create user account (alternate)
-    become: yes
-    user:
-      name: tyson
-      groups: sudo
-      password: "{{ 'password' | password_hash( 'sha512' )}}"
-      shell: /bin/bash
-      update_password: on_create
-    register: tyson
-    tags: create user
-
-  - name: Force tyson to change password
-    become: yes
-    shell: chage -d0 tyson
-    #when: tyson.changed
-    tags:
-    - create user
-    - force password reset
-
-  - name: Create SSH folder
-    become: yes
-    file:
-      path: /home/tyson/.ssh
-      state: directory
-      owner: tyson
-      group: tyson
-      mode: 0700
-    tags: ssh
-
-  - name: Set up SSH Key from a template
-    become: yes
-    template:
-      src: roles/common/templates/authorized_keys
-      dest: /home/tyson/.ssh/authorized_keys
-      owner: tyson
-      group: tyson
-      mode: 0644
-    tags: ssh
-
-  - name: Lock user tyson
-    become: yes
-    command: usermod --lock --expiredate "1999-01-01" tyson
-    tags: lock user
-
-  - name: Unlock user tyson
-    become: yes
-    command: usermod --unlock --expiredate "" tyson
-    tags: unlock user
-
-
-#todo: use template to setup a propper sshd_config file
-  - name: Place secure sshd_config file
-    become: yes
-    template:
-      src: roles/common/templates/sshd_config
-      dest: /etc/ssh
-      owner: root
-      group: root
-      mode: 0600
-      backup: yes
-    register: sshdconfig
-    tags: ssh config
-
-  - name: restart ssh service
-    become: yes
-    service:
-      name: ssh
-      state: reloaded
-    when: sshdconfig.changed
-    tags: ssh config
-#
-#
-#   - name: run 'dpkg --configure -a'
-#     become: yes
-#     command: dpkg --configure -a
-#
-#     # Run apt-get update and apt-get upgrade
-#   - include: ../tasks/update.yml
-#     tags: update
-#
-# #todo: after update and upgrade run install_packages
-
     # Set the hostname
   - name: Set the hostname
     become: yes
     command: hostnamectl set-hostname "{{ hostname }}"
     notify: reboot
     tags: hostname
+
+  - name: Place new /etc/hosts file
+    become: yes
+    template:
+      src: roles/common/templates/hosts
+      dest: /etc/hosts
+      owner: root
+      group: root
+      mode: 0644
+    notify: reboot
+
 
   handlers:
   #~~~~~~~~~~~~~~~ reboot ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -203,30 +91,3 @@
     poll: 0
     ignore_errors: true
     become: true
-
-  # - name: resume after reboot
-  #   local_action: wait_for host={{ansible_host}}
-  #     timeout=60
-  #     port=22
-  #     delay=10
-  #     state=started
-  #     connect_timeout=15
-    # wait_for: timeout=60
-    # delegate_to: localhost
-    # notify: check ssh is back up
-
-  # - name: check ssh is back up
-  #   wait_for:
-  #     port: 22
-  #     host: "{{ ansible_host }}"
-  #     search_regex: OpenSSH
-  #     delay: 10
-  #   connection: local
-
-
-
-  #~~~~~~~~~~~~~~~ reboot ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Update Timezone Data
-  # - name: update tzdata
-  #   become: true
-  #   command: dpkg-reconfigure --frontend noninteractive tzdata

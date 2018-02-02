@@ -1,0 +1,49 @@
+# ansible-playbook -i ~/ansible/hosts /playbooks/new-default.yml
+---
+- hosts: newuser
+  gather_facts: yes
+  become: yes
+
+  tasks:
+  - name: Create ~/.ssh folder for root
+    file:
+      path: "/root/.ssh"
+      state: directory
+      owner: root
+      group: root
+      mode: 0700
+
+  - name: add github ssh key
+    copy: >
+      src=roles/common/files/id_rsa.root.github
+      dest=/root/.ssh/id_rsa.root.github
+      owner=root
+      group=root
+      mode=0600
+
+  - name: configure ssh to use ansible key for github.com
+    template: >
+      src=roles/common/templates/ssh_config.j2
+      dest=/root/.ssh/config
+      owner=root
+      group=root
+      mode=0644
+
+  - name: clone a private repository
+    git: >
+      repo=git@github.com:miyachiamericaeurope/amya-iiot-demo.git
+      key_file=/root/.ssh/id_rsa.root.github
+      accept_hostkey=true
+      dest=/opt/amya-iiot-node
+      clone=yes
+
+  - name: install pip dependencies for amya project
+    command: pip install -r /opt/amya-iiot-node/python_dependencies.txt
+
+
+  # - name: checkout a git repo
+  #   git:
+  #     repo: https://github.com/miyachiamericaeurope/amya-iiot-demo.git
+  #     dest: ~/amya-iiot-demo
+  #     clone: yes
+  #

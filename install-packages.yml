@@ -1,0 +1,54 @@
+# ansible-playbook -i ~/ansible/hosts /playbooks/new-default.yml
+---
+- hosts: newuser
+  gather_facts: yes
+  #transport: paramiko
+  vars:
+    packages_to_install:
+     - git
+     - build-essential
+     - python-pip
+     - python-dev
+     - virtualenv
+     - vim
+    pip_packages_to_install:
+    update_cache: no
+
+  tasks:
+
+  - name: run 'dpkg --configure -a'
+    become: yes
+    command: dpkg --configure -a
+    tags: update
+
+  # Update apt packages
+  - name: Update apt packages
+    become: yes
+    apt:
+      update_cache: yes
+    tags: update
+
+  # Upgrade apt packages
+  - name: Upgrade apt packages
+    become: yes
+    apt:
+      upgrade: dist
+    tags: update
+
+  # - name: install python-apt
+  #   apt:
+  #     name: python-apt
+  #   register: aptget
+  #   changed_when: "'python-apt is already the newest version.' not in aptget.stdout_lines"
+
+  - name: install packages
+    become: yes
+    apt: pkg={{ item  }} state=installed update_cache={{ update_cache }}
+    with_items:
+     - "{{ packages_to_install }}"
+
+  - name: install python modules with pip
+    become: yes
+    pip: name={{  item  }}
+    with_items:
+     - "{{ pip_packages_to_install }}"

@@ -40,6 +40,9 @@
   - name: install pip dependencies for amya project
     command: pip install -r /opt/amya-iiot-node/python_dependencies.txt
 
+  - name: move the ppp peers config files
+    command: mv /opt/amya-iiot-node/amya /etc/ppp/peers/
+
 
   # - name: checkout a git repo
   #   git:

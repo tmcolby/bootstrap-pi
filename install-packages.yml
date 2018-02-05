@@ -11,7 +11,7 @@
      - python-dev
      - virtualenv
      - vim
-     - pptp-linux
+     #- pptp-linux
      - openvpn
      - screen
     pip_packages_to_install:

@@ -12,6 +12,8 @@
      - virtualenv
      - vim
      - pptp-linux
+     - openvpn
+     - screen
     pip_packages_to_install:
     update_cache: no
 
